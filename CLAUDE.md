@@ -36,4 +36,6 @@ Both files are **single-file HTML apps** — all CSS and JS are inline. No frame
 
 - Remote: `https://github.com/erdnal-ai/jarvis-ai-agent`
 - Branch: `main`
-- Commit and push after every meaningful change.
+- **Commit and push after every meaningful change** — feature additions, bug fixes, and significant edits all warrant their own commit. Never batch unrelated changes into one commit.
+- Commit messages should be concise and descriptive: a short subject line summarizing what changed, followed by a brief body if the why isn't obvious.
+- Push to `origin main` immediately after every commit so the remote always reflects current state. We rely on GitHub as the source of truth for reverting if something breaks.
