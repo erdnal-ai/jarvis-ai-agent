@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cyan: #00d4ff;
+      --blue: #0066cc;
+      --dark: #020818;
+      --panel: rgba(0, 20, 50, 0.75);
+    }
+
+    body {
+      background: var(--dark);
+      color: var(--cyan);
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── Settings Panel ── */
+    #settings-panel {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 100;
+      text-align: right;
+    }
+    #settings-toggle {
+      background: var(--panel);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      font-size: 18px;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    #settings-content {
+      display: none;
+      margin-top: 8px;
+      background: var(--panel);
+      border: 1px solid var(--cyan);
+      padding: 12px;
+      border-radius: 4px;
+      min-width: 280px;
+    }
+    #settings-content label {
+      display: block;
+      font-size: 11px;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+    #api-key-input {
+      width: 100%;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid var(--blue);
+      color: var(--cyan);
+      padding: 6px 8px;
+      font-family: monospace;
+      font-size: 12px;
+      margin-bottom: 8px;
+      border-radius: 2px;
+    }
+    #api-key-input:focus { outline: none; border-color: var(--cyan); }
+    #api-key-save {
+      background: transparent;
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 5px 14px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+    #api-key-save:hover { background: rgba(0,212,255,0.1); }
+
+    /* ── Main HUD ── */
+    #hud-wrapper {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Rings SVG */
+    #rings-svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      overflow: visible;
+    }
+    .ring {
+      fill: none;
+      stroke: var(--cyan);
+      stroke-width: 1.5;
+      transform-origin: 160px 160px;
+    }
+    .ring-outer { stroke-dasharray: 60 20; animation: spin-cw  10s linear infinite; opacity: 0.5; }
+    .ring-mid   { stroke-dasharray: 35 15; animation: spin-ccw  7s linear infinite; opacity: 0.65; }
+    .ring-inner { stroke-dasharray: 20 10; animation: spin-cw   4s linear infinite; opacity: 0.8; }
+
+    [data-state="listening"] .ring-outer { animation-duration: 2.5s; opacity: 0.9; }
+    [data-state="listening"] .ring-mid   { animation-duration: 1.8s; opacity: 1; }
+    [data-state="listening"] .ring-inner { animation-duration: 1.0s; opacity: 1; }
+
+    [data-state="processing"] .ring-outer { animation-play-state: paused; opacity: 0.3; }
+    [data-state="processing"] .ring-mid   { animation-play-state: paused; opacity: 0.3; }
+    [data-state="processing"] .ring-inner { animation-duration: 0.5s; opacity: 0.7; }
+
+    [data-state="speaking"] .ring-outer { animation-duration: 5s; opacity: 0.7; }
+    [data-state="speaking"] .ring-mid   { animation-duration: 3.5s; opacity: 0.8; }
+
+    /* Face SVG */
+    #jarvis-face {
+      position: relative;
+      z-index: 2;
+      width: 200px;
+      height: 200px;
+      filter: drop-shadow(0 0 12px rgba(0, 212, 255, 0.4));
+      animation: face-glow 3s ease-in-out infinite;
+    }
+    .face-base { fill: #020c1e; stroke: var(--cyan); stroke-width: 2; }
+    .eye {
+      fill: #001830;
+      stroke: var(--cyan);
+      stroke-width: 1.5;
+      animation: eye-idle 4s ease-in-out infinite;
+    }
+    .brow { stroke: var(--cyan); stroke-width: 2; stroke-linecap: round; fill: none; }
+    .nose { stroke: var(--cyan); stroke-width: 1.5; stroke-linecap: round; fill: none; opacity: 0.7; }
+    .mouth { stroke: var(--cyan); stroke-width: 2.5; stroke-linecap: round; fill: none; }
+    .face-detail { stroke: rgba(0,212,255,0.3); stroke-width: 1; fill: none; }
+
+    [data-state="listening"] #jarvis-face { filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.8)); }
+    [data-state="speaking"] .eye { animation: eye-speak 0.5s ease-in-out infinite; }
+
+    /* Status Text */
+    #status-text {
+      position: absolute;
+      bottom: -36px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      letter-spacing: 3px;
+      white-space: nowrap;
+      color: var(--cyan);
+      opacity: 0.9;
+    }
+
+    /* PTT Button */
+    #ptt-btn {
+      margin-top: 52px;
+      padding: 14px 40px;
+      background: transparent;
+      border: 2px solid var(--cyan);
+      color: var(--cyan);
+      font-family: monospace;
+      font-size: 13px;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+      border-radius: 2px;
+    }
+    #ptt-btn:hover { background: rgba(0,212,255,0.08); }
+    #ptt-btn:active, #ptt-btn.active {
+      background: rgba(0,212,255,0.2);
+      box-shadow: 0 0 20px rgba(0,212,255,0.4);
+    }
+    #ptt-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+    #ptt-hint {
+      font-size: 10px;
+      letter-spacing: 2px;
+      opacity: 0.45;
+      margin-top: 6px;
+      text-align: center;
+    }
+
+    /* Bottom Panels */
+    #bottom-panels {
+      position: fixed;
+      bottom: 20px;
+      left: 0; right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 20px;
+      pointer-events: none;
+    }
+
+    #weather-panel {
+      background: var(--panel);
+      border: 1px solid rgba(0,212,255,0.3);
+      padding: 12px 16px;
+      border-radius: 4px;
+      min-width: 160px;
+      pointer-events: auto;
+    }
+    #weather-city { font-size: 10px; letter-spacing: 2px; opacity: 0.6; margin-bottom: 4px; }
+    #weather-temp { font-size: 28px; font-weight: bold; line-height: 1; margin-bottom: 2px; }
+    #weather-desc { font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    #weather-detail { font-size: 10px; opacity: 0.5; letter-spacing: 1px; }
+
+    #transcript {
+      background: var(--panel);
+      border: 1px solid rgba(0,212,255,0.3);
+      padding: 10px 14px;
+      border-radius: 4px;
+      max-width: 340px;
+      max-height: 180px;
+      overflow-y: auto;
+      pointer-events: auto;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    #transcript::-webkit-scrollbar { width: 4px; }
+    #transcript::-webkit-scrollbar-track { background: transparent; }
+    #transcript::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius: 2px; }
+    .entry { margin-bottom: 8px; }
+    .entry-speaker { font-size: 10px; letter-spacing: 2px; opacity: 0.5; margin-bottom: 2px; }
+    .entry-you .entry-speaker { color: #88ccff; }
+    .entry-jarvis .entry-speaker { color: var(--cyan); }
+    .entry-text { opacity: 0.85; }
+
+    /* Text input fallback */
+    #text-input-wrap {
+      margin-top: 52px;
+      display: flex;
+      gap: 8px;
+    }
+    #text-input {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 10px 14px;
+      font-family: monospace;
+      font-size: 13px;
+      width: 260px;
+      border-radius: 2px;
+    }
+    #text-input:focus { outline: none; }
+    #text-send {
+      background: transparent;
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 10px 16px;
+      font-family: monospace;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+
+    /* Error Toast */
+    .error-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 0, 0, 0.9);
+      border: 1px solid #ff4444;
+      color: #ff8888;
+      padding: 10px 20px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      border-radius: 4px;
+      z-index: 999;
+      animation: toast-in 0.2s ease;
+    }
+
+    /* Keyframes */
+    @keyframes spin-cw  { to { transform: rotate(360deg);  } }
+    @keyframes spin-ccw { to { transform: rotate(-360deg); } }
+
+    @keyframes face-glow {
+      0%, 100% { filter: drop-shadow(0 0 10px rgba(0,212,255,0.35)); }
+      50%       { filter: drop-shadow(0 0 22px rgba(0,212,255,0.65)); }
+    }
+    @keyframes eye-idle {
+      0%, 90%, 100% { ry: 9; }
+      93%           { ry: 1; }
+    }
+    @keyframes eye-speak {
+      0%, 100% { fill: #001830; }
+      50%      { fill: #005588; }
+    }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Settings Panel -->
+  <div id="settings-panel">
+    <button id="settings-toggle" title="Settings">⚙</button>
+    <div id="settings-content">
+      <label>ANTHROPIC API KEY</label>
+      <input id="api-key-input" type="password" placeholder="sk-ant-api...">
+      <button id="api-key-save">SAVE</button>
+    </div>
+  </div>
+
+  <!-- Main HUD -->
+  <div id="hud-wrapper" data-state="idle">
+    <svg id="rings-svg" viewBox="0 0 320 320">
+      <circle class="ring ring-outer" cx="160" cy="160" r="148"/>
+      <circle class="ring ring-mid"   cx="160" cy="160" r="132"/>
+      <circle class="ring ring-inner" cx="160" cy="160" r="118"/>
+    </svg>
+
+    <svg id="jarvis-face" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <!-- Face base -->
+      <circle class="face-base" cx="100" cy="100" r="88"/>
+      <!-- Inner detail ring -->
+      <circle class="face-detail" cx="100" cy="100" r="80"/>
+      <!-- Temple lines -->
+      <line class="face-detail" x1="18" y1="85" x2="28" y2="85"/>
+      <line class="face-detail" x1="182" y1="85" x2="172" y2="85"/>
+      <!-- Chin lines -->
+      <line class="face-detail" x1="75" y1="175" x2="85" y2="170"/>
+      <line class="face-detail" x1="125" y1="175" x2="115" y2="170"/>
+      <!-- Brows -->
+      <line class="brow" id="brow-left"  x1="58" y1="74" x2="86" y2="79"/>
+      <line class="brow" id="brow-right" x1="142" y1="74" x2="114" y2="79"/>
+      <!-- Eyes -->
+      <ellipse class="eye" id="eye-left"  cx="72"  cy="90" rx="14" ry="9"/>
+      <ellipse class="eye" id="eye-right" cx="128" cy="90" rx="14" ry="9"/>
+      <!-- Nose -->
+      <line class="nose" x1="96"  y1="100" x2="93"  y2="115"/>
+      <line class="nose" x1="104" y1="100" x2="107" y2="115"/>
+      <!-- Mouth -->
+      <path class="mouth" id="mouth" d="M 70 132 Q 100 138 130 132"/>
+    </svg>
+
+    <div id="status-text">INITIALIZING...</div>
+  </div>
+
+  <!-- PTT Button (replaced by text fallback if no SpeechRecognition) -->
+  <button id="ptt-btn" disabled>HOLD TO SPEAK</button>
+  <div id="ptt-hint">OR HOLD SPACEBAR</div>
+
+  <!-- Bottom Panels -->
+  <div id="bottom-panels">
+    <div id="weather-panel">
+      <div id="weather-city">NASHVILLE, TN</div>
+      <div id="weather-temp">--°F</div>
+      <div id="weather-desc">LOADING...</div>
+      <div id="weather-detail">-- % HUM · -- MPH</div>
+    </div>
+    <div id="transcript"></div>
+  </div>
+
+  <script>
+    // ── CONSTANTS ──
+    const MOUTH_CLOSED       = 'M 70 132 Q 100 138 130 132';
+    const MOUTH_OPEN         = 'M 70 126 Q 100 154 130 126';
+    const MOUTH_INTERVAL_MS  = 140;
+    const MAX_HISTORY        = 20;
+    const CLAUDE_MODEL       = 'claude-sonnet-4-6';
+    const MAX_TOKENS         = 300;
+    const WEATHER_URL        = 'https://wttr.in/Nashville,TN?format=j1';
+    const API_URL            = 'https://api.anthropic.com/v1/messages';
+
+    // ── STATE ──
+    let state           = 'idle';
+    let apiKey          = '';
+    let weatherContext  = 'Nashville weather data is currently unavailable.';
+    let messages        = [];
+    let mouthTimer      = null;
+    let mouthIsOpen     = false;
+    let isRecording     = false;
+    let availableVoices = [];
+    let ttsUnlocked     = false;
+
+    // ── DOM REFS ──
+    const hudWrapper      = document.getElementById('hud-wrapper');
+    const statusText      = document.getElementById('status-text');
+    const mouthPath       = document.getElementById('mouth');
+    const eyeLeft         = document.getElementById('eye-left');
+    const eyeRight        = document.getElementById('eye-right');
+    const weatherTemp     = document.getElementById('weather-temp');
+    const weatherDesc     = document.getElementById('weather-desc');
+    const weatherDetail   = document.getElementById('weather-detail');
+    const transcriptEl    = document.getElementById('transcript');
+    const pttBtn          = document.getElementById('ptt-btn');
+    const pttHint         = document.getElementById('ptt-hint');
+    const apiKeyInput     = document.getElementById('api-key-input');
+    const settingsToggle  = document.getElementById('settings-toggle');
+    const settingsContent = document.getElementById('settings-content');
+
+    // ── VOICES ──
+    function loadVoices() {
+      availableVoices = speechSynthesis.getVoices();
+    }
+    speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    // ── STATE MACHINE ──
+    function setState(newState) {
+      state = newState;
+      hudWrapper.dataset.state = newState;
+      const labels = {
+        idle:       'READY',
+        listening:  'LISTENING...',
+        processing: 'PROCESSING...',
+        speaking:   'SPEAKING...'
+      };
+      statusText.textContent = labels[newState] || '';
+      if (pttBtn) {
+        pttBtn.textContent = newState === 'listening' ? 'RELEASE TO SEND' : 'HOLD TO SPEAK';
+        pttBtn.disabled = (newState === 'processing' || newState === 'speaking');
+        if (newState === 'listening') pttBtn.classList.add('active');
+        else pttBtn.classList.remove('active');
+      }
+    }
+
+    // ── WEATHER ──
+    async function loadWeather() {
+      try {
+        const res  = await fetch(WEATHER_URL);
+        const data = await res.json();
+        const cur  = data.current_condition[0];
+        const tempF   = cur.temp_F;
+        const feelsF  = cur.FeelsLikeF;
+        const humid   = cur.humidity;
+        const windMph = cur.windspeedMiles;
+        const desc    = cur.weatherDesc[0].value;
+
+        weatherTemp.textContent   = tempF + '°F';
+        weatherDesc.textContent   = desc.toUpperCase();
+        weatherDetail.textContent = humid + '% HUM · ' + windMph + ' MPH';
+
+        weatherContext = `Temperature: ${tempF}°F (feels like ${feelsF}°F). Conditions: ${desc}. Humidity: ${humid}%. Wind: ${windMph} mph.`;
+      } catch {
+        weatherDesc.textContent = 'UNAVAILABLE';
+      }
+    }
+
+    // ── CLAUDE API ──
+    // ── DEMO RESPONSES (used when no API key is present) ──
+    const DEMO_RESPONSES = [
+      `Currently in Nashville, Sir, it is ${weatherContext.includes('unavailable') ? 'a fine day' : weatherContext.split('.')[0].toLowerCase()}. I would recommend dressing accordingly before venturing outside.`,
+      `Nashville is experiencing typical Tennessee conditions at the moment, Sir. ${weatherContext.includes('unavailable') ? 'Unfortunately live data is unavailable, but rest assured I am monitoring the situation.' : weatherContext}`,
+      `Quite right to enquire, Sir. Nashville weather: ${weatherContext.includes('unavailable') ? 'data temporarily unavailable. I suggest checking again momentarily.' : weatherContext}`,
+      `I have the latest Nashville atmospheric data at hand, Sir. ${weatherContext.includes('unavailable') ? 'However it appears the weather service is momentarily offline.' : weatherContext} Will there be anything else?`,
+      `A reasonable question, Sir. I am afraid my knowledge is strictly limited to Nashville, Tennessee weather. ${weatherContext.includes('unavailable') ? 'Current data is unavailable.' : 'At present: ' + weatherContext}`
+    ];
+    let demoIndex = 0;
+
+    async function askJarvis() {
+      if (!apiKey) {
+        // Demo mode — rotate through canned responses
+        const reply = DEMO_RESPONSES[demoIndex % DEMO_RESPONSES.length];
+        demoIndex++;
+        return reply;
+      }
+
+      const systemPrompt =
+        `You are JARVIS (Just A Rather Very Intelligent System), an AI assistant. ` +
+        `Speak with a formal, slightly British tone. Address the user as "Sir" or "Ma'am". ` +
+        `Your ONLY area of knowledge is the current weather in Nashville, Tennessee. ` +
+        `If asked about anything unrelated to Nashville weather, politely acknowledge and redirect. ` +
+        `Keep all responses under 60 words. Be concise and precise. ` +
+        `Current Nashville weather: ${weatherContext}`;
+
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: CLAUDE_MODEL,
+          max_tokens: MAX_TOKENS,
+          system: systemPrompt,
+          messages: messages.slice(-MAX_HISTORY)
+        })
+      });
+
+      if (!res.ok) {
+        let errMsg = `HTTP ${res.status}`;
+        try { const e = await res.json(); errMsg = e.error?.message || errMsg; } catch {}
+        throw new Error(errMsg);
+      }
+      return (await res.json()).content[0].text;
+    }
+
+    // ── TRANSCRIPT ──
+    function appendEntry(speaker, text) {
+      const entry = document.createElement('div');
+      entry.className = 'entry entry-' + speaker.toLowerCase();
+      entry.innerHTML =
+        `<div class="entry-speaker">${speaker}</div>` +
+        `<div class="entry-text">${text}</div>`;
+      transcriptEl.appendChild(entry);
+      transcriptEl.scrollTop = transcriptEl.scrollHeight;
+    }
+
+    // Safari requires TTS to be triggered within a user gesture context.
+    function unlockTTS() {
+      if (ttsUnlocked) return;
+      ttsUnlocked = true;
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      speechSynthesis.speak(u);
+    }
+
+    // ── SPEECH SYNTHESIS + MOUTH ──
+    let ttsHeartbeat = null;
+
+    function speak(text) {
+      // Reload voices in case they weren't ready at init
+      loadVoices();
+
+      // Safari often silently pauses synthesis — resume it first
+      speechSynthesis.cancel();
+      speechSynthesis.resume();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate   = 0.88;
+      utterance.pitch  = 0.75;
+      utterance.volume = 1.0;
+
+      const british = availableVoices.find(v => v.lang === 'en-GB' && v.name.includes('Daniel'))
+        || availableVoices.find(v => v.lang.startsWith('en-GB'))
+        || availableVoices.find(v => v.lang.startsWith('en'))
+        || availableVoices[0];
+      if (british) utterance.voice = british;
+
+      utterance.onstart = () => {
+        setState('speaking');
+        startMouthAnimation();
+        // Safari heartbeat: prevent synthesis from silently pausing mid-speech
+        ttsHeartbeat = setInterval(() => speechSynthesis.resume(), 5000);
+      };
+      const onDone = () => {
+        if (ttsHeartbeat) { clearInterval(ttsHeartbeat); ttsHeartbeat = null; }
+        stopMouthAnimation();
+        setState('idle');
+      };
+      utterance.onend   = onDone;
+      utterance.onerror = (e) => { console.warn('TTS error:', e.error); onDone(); };
+
+      speechSynthesis.speak(utterance);
+    }
+
+    function startMouthAnimation() {
+      stopMouthAnimation();
+      mouthTimer = setInterval(() => {
+        mouthIsOpen = !mouthIsOpen;
+        mouthPath.setAttribute('d', mouthIsOpen ? MOUTH_OPEN : MOUTH_CLOSED);
+      }, MOUTH_INTERVAL_MS);
+    }
+
+    function stopMouthAnimation() {
+      if (mouthTimer) { clearInterval(mouthTimer); mouthTimer = null; }
+      mouthIsOpen = false;
+      mouthPath.setAttribute('d', MOUTH_CLOSED);
+    }
+
+    // ── ERROR TOAST ──
+    function showError(msg) {
+      const el = document.createElement('div');
+      el.className = 'error-toast';
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 5000);
+    }
+
+    // ── HANDLE USER INPUT ──
+    async function handleInput(text) {
+      if (!text) { setState('idle'); return; }
+      // No API key = demo mode, handled inside askJarvis()
+      appendEntry('You', text);
+      messages.push({ role: 'user', content: text });
+      setState('processing');
+      try {
+        const reply = await askJarvis();
+        messages.push({ role: 'assistant', content: reply });
+        appendEntry('JARVIS', reply);
+        speak(reply);
+      } catch (err) {
+        // Fall back to demo response on any API failure
+        const reply = DEMO_RESPONSES[demoIndex % DEMO_RESPONSES.length];
+        demoIndex++;
+        messages.push({ role: 'assistant', content: reply });
+        appendEntry('JARVIS', reply);
+        speak(reply);
+      }
+    }
+
+    // ── SPEECH RECOGNITION ──
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.continuous      = false;
+      recognition.interimResults  = false;
+      recognition.lang            = 'en-US';
+
+      recognition.onresult = (e) => {
+        const text = e.results[0][0].transcript.trim();
+        handleInput(text);
+      };
+      recognition.onerror = (e) => {
+        if (e.error === 'not-allowed') showError('Microphone access denied.');
+        else if (e.error !== 'no-speech') showError('Recognition error: ' + e.error);
+        setState('idle');
+        isRecording = false;
+      };
+      recognition.onend = () => {
+        if (state === 'listening') setState('idle');
+        isRecording = false;
+      };
+    } else {
+      // Text input fallback
+      pttBtn.style.display = 'none';
+      pttHint.style.display = 'none';
+      const wrap = document.createElement('div');
+      wrap.id = 'text-input-wrap';
+      wrap.innerHTML = '<input id="text-input" type="text" placeholder="Ask JARVIS about Nashville weather..."><button id="text-send">SEND</button>';
+      document.body.insertBefore(wrap, document.getElementById('bottom-panels'));
+
+      document.getElementById('text-send').addEventListener('click', () => {
+        const input = document.getElementById('text-input');
+        const val = input.value.trim();
+        if (!val || state !== 'idle') return;
+        input.value = '';
+        handleInput(val);
+      });
+      document.getElementById('text-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('text-send').click();
+      });
+    }
+
+    // ── EVENT LISTENERS ──
+    // Keyboard PTT
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.code === 'Space' && !isRecording && state === 'idle' && recognition) {
+        e.preventDefault();
+        unlockTTS();
+        isRecording = true;
+        setState('listening');
+        try { recognition.start(); } catch {}
+      }
+    });
+    document.addEventListener('keyup', (e) => {
+      if (e.code === 'Space' && isRecording && recognition) {
+        e.preventDefault();
+        isRecording = false;
+        try { recognition.stop(); } catch {}
+      }
+    });
+
+    // Button PTT
+    pttBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (state !== 'idle' || !recognition) return;
+      unlockTTS();
+      isRecording = true;
+      setState('listening');
+      try { recognition.start(); } catch {}
+    });
+    pttBtn.addEventListener('pointerup', () => {
+      if (isRecording && recognition) {
+        isRecording = false;
+        try { recognition.stop(); } catch {}
+      }
+    });
+    pttBtn.addEventListener('pointerleave', () => {
+      if (isRecording && recognition) {
+        isRecording = false;
+        try { recognition.stop(); } catch {}
+      }
+    });
+
+    // Settings
+    settingsToggle.addEventListener('click', () => {
+      settingsContent.style.display = settingsContent.style.display === 'none' ? 'block' : 'none';
+    });
+    document.getElementById('api-key-save').addEventListener('click', () => {
+      apiKey = apiKeyInput.value.trim();
+      if (apiKey) localStorage.setItem('jarvis_api_key', apiKey);
+      settingsContent.style.display = 'none';
+    });
+
+    // ── INIT ──
+    (async function init() {
+      const saved = localStorage.getItem('jarvis_api_key');
+      if (saved) {
+        apiKey = saved;
+        apiKeyInput.value = saved;
+      } else {
+        settingsContent.style.display = 'block';
+      }
+
+      loadVoices();
+      await loadWeather();
+
+      if (pttBtn) pttBtn.disabled = false;
+      setState('idle');
+    })();
+  </script>
+</body>
+</html>
