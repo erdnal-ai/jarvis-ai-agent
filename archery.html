@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Archery</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: 'Georgia', serif;
+      overflow: hidden;
+      user-select: none;
+    }
+    #gameCanvas {
+      display: block;
+      cursor: crosshair;
+      border-radius: 8px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8);
+    }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+// ── DOM ──────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// ── CONSTANTS ────────────────────────────────────────────────────────────────
+const W = 900, H = 500;
+canvas.width = W; canvas.height = H;
+
+const GROUND_Y = H - 80;
+const ARCHER_X = 90;
+const ARCHER_Y = GROUND_Y - 55;
+const GRAVITY = 320;          // px/s²
+const MAX_POWER = 580;        // px/s at full draw
+const DRAW_TIME = 1.8;        // seconds to reach full draw
+const TARGET_RINGS = [
+  { r: 1.0, color: '#ffffff', pts: 1 },
+  { r: 0.8, color: '#1a1aff', pts: 3 },
+  { r: 0.6, color: '#cc0000', pts: 5 },
+  { r: 0.4, color: '#cc0000', pts: 7 },
+  { r: 0.2, color: '#ffdd00', pts: 10 },
+];
+
+// ── LEVEL DEFINITIONS ────────────────────────────────────────────────────────
+const LEVELS = [
+  { wind: 0,    windDir: 1,  targetX: 720, targetR: 55, label: 'Level 1 — No Wind' },
+  { wind: 25,   windDir: -1, targetX: 740, targetR: 55, label: 'Level 2 — Light Wind ←' },
+  { wind: 35,   windDir: 1,  targetX: 790, targetR: 50, label: 'Level 3 — Light Wind →' },
+  { wind: 60,   windDir: -1, targetX: 760, targetR: 45, label: 'Level 4 — Moderate Wind ←' },
+  { wind: 70,   windDir: 1,  targetX: 800, targetR: 42, label: 'Level 5 — Moderate Wind →' },
+  { wind: 90,   windDir: -1, targetX: 820, targetR: 38, label: 'Level 6 — Strong Wind ←' },
+  { wind: 100,  windDir: 1,  targetX: 830, targetR: 35, label: 'Level 7 — Strong Wind →' },
+  { wind: 120,  windDir: -1, targetX: 840, targetR: 32, label: 'Level 8 — Gale ←' },
+  { wind: 130,  windDir: 1,  targetX: 850, targetR: 30, label: 'Level 9 — Gale →' },
+  { wind: 150,  windDir: -1, targetX: 860, targetR: 28, label: 'Level 10 — Hurricane ←' },
+];
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let state = 'idle';   // idle | aiming | drawing | flying | result | levelup | gameover
+let level = 0;
+let score = 0;
+let arrowsLeft = 3;
+let drawStartTime = 0;
+let drawPower = 0;
+let mouseX = 0, mouseY = 0;
+let aimAngle = 0;
+let arrow = null;           // { x, y, vx, vy }
+let stuckArrows = [];       // [{ x, y, angle }]
+let hitRing = -1;           // index into TARGET_RINGS, -1 = miss
+let resultTimer = 0;
+let bannerTimer = 0;
+let bannerText = '';
+let windParticles = [];
+let flashRing = -1;         // ring to flash on hit
+let flashTimer = 0;
+let totalScore = 0;
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function currentLevel() { return LEVELS[Math.min(level, LEVELS.length - 1)]; }
+function groundAt(x) { return GROUND_Y; }
+
+function initWindParticles() {
+  windParticles = [];
+  const lv = currentLevel();
+  const count = Math.floor(6 + Math.abs(lv.wind) / 15);
+  for (let i = 0; i < count; i++) {
+    windParticles.push(spawnWindParticle(Math.random()));
+  }
+}
+
+function spawnWindParticle(progress = 0) {
+  const lv = currentLevel();
+  const speed = Math.abs(lv.wind) * 1.2 + 20;
+  const dir = lv.windDir;
+  const startX = dir > 0 ? -20 : W + 20;
+  return {
+    x: startX + dir * progress * W,
+    y: 60 + Math.random() * (GROUND_Y - 100),
+    speed: speed * (0.7 + Math.random() * 0.6),
+    length: 18 + Math.random() * 22,
+    alpha: 0.15 + Math.random() * 0.3,
+    dir,
+  };
+}
+
+function getAimAngle() {
+  const dx = mouseX - ARCHER_X;
+  const dy = mouseY - ARCHER_Y;
+  return Math.atan2(dy, dx);
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+function startLevel() {
+  stuckArrows = [];
+  arrowsLeft = 3;
+  hitRing = -1;
+  arrow = null;
+  state = 'aiming';
+  initWindParticles();
+  bannerText = currentLevel().label;
+  bannerTimer = 2.0;
+  state = 'banner';
+}
+
+function nextLevel() {
+  level++;
+  if (level >= LEVELS.length) {
+    state = 'gameover';
+    bannerTimer = 999;
+    bannerText = 'You Win!\nFinal Score: ' + totalScore;
+    return;
+  }
+  startLevel();
+}
+
+// Start game
+startLevel();
+
+// ── INPUT ────────────────────────────────────────────────────────────────────
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = (e.clientX - rect.left) * (W / rect.width);
+  mouseY = (e.clientY - rect.top)  * (H / rect.height);
+});
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  if (state === 'aiming') {
+    state = 'drawing';
+    drawStartTime = performance.now() / 1000;
+    drawPower = 0;
+  }
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (e.button !== 0) return;
+  if (state === 'drawing' && drawPower > 0.05) {
+    fireArrow();
+  } else if (state === 'drawing') {
+    state = 'aiming';
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  if (state === 'drawing') state = 'aiming';
+});
+
+canvas.addEventListener('click', e => {
+  if (state === 'result') {
+    if (arrowsLeft > 0 && hitRing < 0) {
+      state = 'aiming';
+    } else {
+      nextLevel();
+    }
+  } else if (state === 'gameover') {
+    // restart
+    level = 0; score = 0; totalScore = 0;
+    startLevel();
+  } else if (state === 'banner') {
+    bannerTimer = 0;
+  }
+});
+
+// ── FIRE ─────────────────────────────────────────────────────────────────────
+function fireArrow() {
+  aimAngle = getAimAngle();
+  const spd = drawPower * MAX_POWER;
+  arrow = {
+    x: ARCHER_X + 14,
+    y: ARCHER_Y - 12,
+    vx: Math.cos(aimAngle) * spd,
+    vy: Math.sin(aimAngle) * spd,
+  };
+  arrowsLeft--;
+  state = 'flying';
+}
+
+// ── HIT DETECTION ────────────────────────────────────────────────────────────
+function checkHit() {
+  const lv = currentLevel();
+  const tx = lv.targetX;
+  const ty = getTargetY();
+  const dist = Math.hypot(arrow.x - tx, arrow.y - ty);
+  for (let i = TARGET_RINGS.length - 1; i >= 0; i--) {
+    if (dist <= lv.targetR * TARGET_RINGS[i].r) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function getTargetY() {
+  return GROUND_Y - 60;
+}
+
+// ── UPDATE ───────────────────────────────────────────────────────────────────
+let lastTime = null;
+function update(ts) {
+  const now = ts / 1000;
+  const dt = lastTime === null ? 0 : Math.min(now - lastTime, 0.05);
+  lastTime = now;
+
+  const lv = currentLevel();
+
+  // Wind particles always animate
+  windParticles.forEach(p => {
+    p.x += p.dir * p.speed * dt;
+    const offscreen = p.dir > 0 ? p.x > W + 30 : p.x < -30;
+    if (offscreen) {
+      Object.assign(p, spawnWindParticle(0));
+    }
+  });
+
+  if (state === 'banner') {
+    bannerTimer -= dt;
+    if (bannerTimer <= 0) state = 'aiming';
+    return;
+  }
+
+  if (state === 'drawing') {
+    const elapsed = now - drawStartTime;
+    drawPower = Math.min(elapsed / DRAW_TIME, 1.0);
+    aimAngle = getAimAngle();
+  }
+
+  if (state === 'flying' && arrow) {
+    const windForce = lv.wind * lv.windDir;
+    arrow.vx += windForce * dt;
+    arrow.vy += GRAVITY * dt;
+    arrow.x += arrow.vx * dt;
+    arrow.y += arrow.vy * dt;
+
+    // Check target hit
+    const ring = checkHit();
+    if (ring >= 0) {
+      const pts = TARGET_RINGS[ring].pts;
+      score += pts;
+      totalScore += pts;
+      hitRing = ring;
+      flashRing = ring;
+      flashTimer = 0.8;
+      stuckArrows.push({ x: arrow.x, y: arrow.y, angle: Math.atan2(arrow.vy, arrow.vx) });
+      arrow = null;
+      state = 'result';
+      resultTimer = 0;
+      return;
+    }
+
+    // Ground hit
+    if (arrow.y >= groundAt(arrow.x)) {
+      arrow.y = groundAt(arrow.x);
+      stuckArrows.push({ x: arrow.x, y: arrow.y, angle: Math.atan2(arrow.vy, arrow.vx) });
+      arrow = null;
+      if (arrowsLeft <= 0) {
+        hitRing = -1;
+        state = 'result';
+        resultTimer = 0;
+      } else {
+        state = 'aiming';
+      }
+      return;
+    }
+
+    // Off-screen
+    if (arrow.x > W + 50 || arrow.x < -50 || arrow.y < -200) {
+      stuckArrows.push({ x: Math.min(arrow.x, W), y: Math.max(arrow.y, 0), angle: Math.atan2(arrow.vy, arrow.vx) });
+      arrow = null;
+      if (arrowsLeft <= 0) {
+        hitRing = -1;
+        state = 'result';
+        resultTimer = 0;
+      } else {
+        state = 'aiming';
+      }
+    }
+  }
+
+  if (state === 'result') {
+    resultTimer += dt;
+    if (flashTimer > 0) flashTimer -= dt;
+  }
+}
+
+// ── DRAW HELPERS ─────────────────────────────────────────────────────────────
+function drawBackground() {
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+  sky.addColorStop(0, '#87ceeb');
+  sky.addColorStop(0.6, '#c8e8f5');
+  sky.addColorStop(1, '#e8f4f8');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, GROUND_Y);
+
+  // Distant mountains
+  ctx.fillStyle = '#b0c8d8';
+  ctx.beginPath();
+  ctx.moveTo(0, GROUND_Y);
+  ctx.lineTo(0, GROUND_Y - 90);
+  ctx.lineTo(120, GROUND_Y - 160);
+  ctx.lineTo(260, GROUND_Y - 110);
+  ctx.lineTo(380, GROUND_Y - 140);
+  ctx.lineTo(520, GROUND_Y - 95);
+  ctx.lineTo(680, GROUND_Y - 130);
+  ctx.lineTo(900, GROUND_Y - 85);
+  ctx.lineTo(W, GROUND_Y);
+  ctx.closePath();
+  ctx.fill();
+
+  // Trees (left cluster)
+  drawTree(140, GROUND_Y, 18, 50);
+  drawTree(165, GROUND_Y, 14, 42);
+  drawTree(155, GROUND_Y - 5, 16, 48);
+
+  // Trees (right cluster behind target)
+  const lv = currentLevel();
+  drawTree(lv.targetX + 60, GROUND_Y, 20, 58);
+  drawTree(lv.targetX + 85, GROUND_Y, 16, 44);
+
+  // Ground
+  const grd = ctx.createLinearGradient(0, GROUND_Y, 0, H);
+  grd.addColorStop(0, '#5a8a3a');
+  grd.addColorStop(0.3, '#4a7a2a');
+  grd.addColorStop(1, '#3a6020');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+
+  // Ground highlight strip
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(0, GROUND_Y, W, 3);
+}
+
+function drawTree(x, groundY, r, h) {
+  // Trunk
+  ctx.fillStyle = '#6b4226';
+  ctx.fillRect(x - 4, groundY - h * 0.35, 8, h * 0.35);
+  // Foliage layers
+  ctx.fillStyle = '#2d6a2d';
+  ctx.beginPath(); ctx.ellipse(x, groundY - h * 0.85, r, r * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#3a8a3a';
+  ctx.beginPath(); ctx.ellipse(x, groundY - h * 0.72, r * 0.85, r * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#4aaa4a';
+  ctx.beginPath(); ctx.ellipse(x, groundY - h * 0.62, r * 0.65, r * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawTarget() {
+  const lv = currentLevel();
+  const tx = lv.targetX;
+  const ty = getTargetY();
+  const r = lv.targetR;
+
+  // Post
+  ctx.fillStyle = '#8b6914';
+  ctx.fillRect(tx - 5, ty + r * 0.5, 10, GROUND_Y - ty - r * 0.5);
+
+  // Rings (outer to inner)
+  TARGET_RINGS.forEach((ring, i) => {
+    const isFlashing = flashRing === i && flashTimer > 0 && Math.sin(flashTimer * 18) > 0;
+    ctx.fillStyle = isFlashing ? '#ffffff' : ring.color;
+    ctx.beginPath();
+    ctx.arc(tx, ty, r * ring.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  // Center dot
+  ctx.fillStyle = '#ff0000';
+  ctx.beginPath();
+  ctx.arc(tx, ty, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawArrowShape(x, y, angle, alpha = 1) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  // Shaft
+  ctx.strokeStyle = '#8b6914';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(-22, 0);
+  ctx.lineTo(10, 0);
+  ctx.stroke();
+  // Head
+  ctx.fillStyle = '#777';
+  ctx.beginPath();
+  ctx.moveTo(10, 0);
+  ctx.lineTo(4, -3);
+  ctx.lineTo(4, 3);
+  ctx.closePath();
+  ctx.fill();
+  // Fletching
+  ctx.strokeStyle = '#cc3333';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-18, 0); ctx.lineTo(-22, -5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-18, 0); ctx.lineTo(-22, 5); ctx.stroke();
+  ctx.restore();
+}
+
+function drawArcher() {
+  const x = ARCHER_X;
+  const y = ARCHER_Y;
+  const isDrawing = state === 'drawing' || state === 'flying';
+  const power = state === 'drawing' ? drawPower : 0;
+
+  ctx.save();
+
+  // Body
+  ctx.fillStyle = '#2c2c2c';
+  // Legs
+  ctx.fillRect(x - 8, y + 20, 7, 35);
+  ctx.fillRect(x + 1, y + 20, 7, 35);
+  // Torso
+  ctx.fillRect(x - 10, y - 5, 20, 27);
+  // Head
+  ctx.beginPath();
+  ctx.arc(x - 2, y - 16, 10, 0, Math.PI * 2);
+  ctx.fillStyle = '#d4a574';
+  ctx.fill();
+  // Hair
+  ctx.fillStyle = '#4a2a00';
+  ctx.beginPath();
+  ctx.arc(x - 2, y - 20, 9, Math.PI, Math.PI * 2);
+  ctx.fill();
+
+  // Bow arm (left arm stretched forward)
+  const bowArmX = x - 22;
+  const bowArmY = y + 4;
+
+  // Draw arm
+  ctx.strokeStyle = '#2c2c2c';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - 5, y + 2);
+  ctx.lineTo(bowArmX, bowArmY);
+  ctx.stroke();
+
+  // Draw bow
+  const bowCurve = 14 + power * 6;
+  ctx.strokeStyle = '#6b4226';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(bowArmX, bowArmY - 28);
+  ctx.quadraticCurveTo(bowArmX - bowCurve, bowArmY, bowArmX, bowArmY + 28);
+  ctx.stroke();
+
+  // Bow string
+  const pullBack = power * 22;
+  ctx.strokeStyle = '#e8e8d0';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(bowArmX, bowArmY - 28);
+  ctx.lineTo(bowArmX + pullBack, bowArmY);
+  ctx.lineTo(bowArmX, bowArmY + 28);
+  ctx.stroke();
+
+  // Arrow on bow (while drawing)
+  if (state === 'drawing' || state === 'aiming') {
+    const ang = getAimAngle();
+    const arrowStartX = bowArmX + pullBack;
+    const arrowStartY = bowArmY;
+    ctx.save();
+    ctx.translate(arrowStartX, arrowStartY);
+    ctx.rotate(ang);
+    // Shaft preview
+    ctx.strokeStyle = '#8b6914';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 2]);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(30, 0);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // Pull arm
+  ctx.strokeStyle = '#2c2c2c';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(x + 2, y + 2);
+  ctx.lineTo(bowArmX + pullBack + 4, bowArmY);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawFlyingArrow() {
+  if (!arrow) return;
+  const angle = Math.atan2(arrow.vy, arrow.vx);
+  drawArrowShape(arrow.x, arrow.y, angle);
+}
+
+function drawStuckArrows() {
+  stuckArrows.forEach(a => drawArrowShape(a.x, a.y, a.angle));
+}
+
+function drawWindIndicator() {
+  const lv = currentLevel();
+  if (lv.wind === 0) {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(W - 160, 14, 146, 36);
+    ctx.fillStyle = '#e8e8e8';
+    ctx.font = 'bold 15px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText('No Wind', W - 87, 38);
+    ctx.textAlign = 'left';
+    return;
+  }
+
+  const mph = Math.round(Math.abs(lv.wind) * 0.45);
+  const dir = lv.windDir;
+  const label = (dir < 0 ? '← ' : '→ ') + mph + ' mph';
+
+  // Background
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(W - 180, 14, 166, 56);
+
+  // Title
+  ctx.fillStyle = '#aaddff';
+  ctx.font = '11px Georgia';
+  ctx.textAlign = 'center';
+  ctx.fillText('WIND', W - 97, 32);
+
+  // Bar
+  const barW = 120;
+  const barX = W - 157;
+  const barY = 38;
+  ctx.fillStyle = '#333';
+  ctx.fillRect(barX, barY, barW, 12);
+  const fill = Math.min(Math.abs(lv.wind) / 160, 1) * barW;
+  const windColor = fill < barW * 0.4 ? '#88cc44' : fill < barW * 0.7 ? '#ffcc00' : '#ff4444';
+  if (dir > 0) {
+    ctx.fillStyle = windColor;
+    ctx.fillRect(barX, barY, fill, 12);
+  } else {
+    ctx.fillStyle = windColor;
+    ctx.fillRect(barX + barW - fill, barY, fill, 12);
+  }
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(barX, barY, barW, 12);
+
+  // Label
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 13px Georgia';
+  ctx.fillText(label, W - 97, 65);
+  ctx.textAlign = 'left';
+}
+
+function drawWindParticles() {
+  const lv = currentLevel();
+  if (lv.wind === 0) return;
+  windParticles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = p.alpha;
+    ctx.strokeStyle = '#aaddff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const tailX = p.x - p.dir * p.length;
+    ctx.moveTo(tailX, p.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    // Arrowhead
+    ctx.fillStyle = '#aaddff';
+    ctx.beginPath();
+    const hx = p.x;
+    const hy = p.y;
+    ctx.moveTo(hx + p.dir * 5, hy);
+    ctx.lineTo(hx - p.dir * 2, hy - 3);
+    ctx.lineTo(hx - p.dir * 2, hy + 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+function drawPowerMeter() {
+  if (state !== 'drawing') return;
+  const barH = 100;
+  const barW = 14;
+  const bx = 20, by = ARCHER_Y - 60;
+
+  // Label
+  ctx.fillStyle = '#fff';
+  ctx.font = '10px Georgia';
+  ctx.textAlign = 'center';
+  ctx.fillText('POWER', bx + barW / 2, by - 8);
+
+  // Background
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(bx, by, barW, barH);
+
+  // Fill
+  const fill = drawPower * barH;
+  const meterColor = drawPower < 0.4 ? '#44cc44' : drawPower < 0.75 ? '#ffcc00' : '#ff4444';
+  ctx.fillStyle = meterColor;
+  ctx.fillRect(bx, by + barH - fill, barW, fill);
+
+  // Border
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx, by, barW, barH);
+
+  // Tick marks
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 1;
+  for (let t = 1; t <= 3; t++) {
+    const ty2 = by + barH - (t / 4) * barH;
+    ctx.beginPath();
+    ctx.moveTo(bx, ty2);
+    ctx.lineTo(bx + barW, ty2);
+    ctx.stroke();
+  }
+
+  ctx.textAlign = 'left';
+}
+
+function drawHUD() {
+  // Score panel
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(10, 14, 200, 56);
+
+  ctx.fillStyle = '#ffdd66';
+  ctx.font = 'bold 14px Georgia';
+  ctx.fillText(`Level ${level + 1} / ${LEVELS.length}`, 22, 34);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '13px Georgia';
+  ctx.fillText(`Score: ${totalScore}`, 22, 52);
+
+  ctx.fillStyle = '#ff9944';
+  ctx.font = '13px Georgia';
+  ctx.fillText(`Arrows: ${'●'.repeat(arrowsLeft)}${'○'.repeat(Math.max(0, 3 - arrowsLeft))}`, 22, 66);
+
+  // Aim crosshair (while aiming)
+  if (state === 'aiming' || state === 'drawing') {
+    const ang = getAimAngle();
+    // Dotted trajectory preview
+    const spd = (state === 'drawing' ? drawPower : 0.5) * MAX_POWER;
+    ctx.save();
+    ctx.setLineDash([4, 6]);
+    ctx.strokeStyle = 'rgba(255,255,180,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const lv = currentLevel();
+    let px = ARCHER_X + 14, py = ARCHER_Y - 12;
+    let pvx = Math.cos(ang) * spd, pvy = Math.sin(ang) * spd;
+    const steps = 28, stepDt = 0.045;
+    ctx.moveTo(px, py);
+    for (let i = 0; i < steps; i++) {
+      pvx += lv.wind * lv.windDir * stepDt;
+      pvy += GRAVITY * stepDt;
+      px += pvx * stepDt;
+      py += pvy * stepDt;
+      if (py > GROUND_Y || px > W) break;
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+}
+
+function drawResultOverlay() {
+  if (state !== 'result') return;
+  if (resultTimer < 0.3) return;
+
+  const hit = hitRing >= 0;
+  const pts = hit ? TARGET_RINGS[hitRing].pts : 0;
+  const msg = hit ? (pts >= 10 ? 'BULLSEYE!' : pts >= 7 ? 'GREAT SHOT!' : pts >= 5 ? 'NICE SHOT!' : 'HIT!') : (arrowsLeft <= 0 ? 'MISS — NO ARROWS LEFT' : 'MISS');
+
+  const ox = W / 2, oy = H / 2 - 20;
+  const bw = 320, bh = 80;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.beginPath();
+  ctx.roundRect(ox - bw / 2, oy - bh / 2, bw, bh, 12);
+  ctx.fill();
+
+  ctx.fillStyle = hit ? '#ffdd44' : '#ff6655';
+  ctx.font = 'bold 28px Georgia';
+  ctx.textAlign = 'center';
+  ctx.fillText(msg, ox, oy + 2);
+
+  if (hit) {
+    ctx.fillStyle = '#aaffaa';
+    ctx.font = '16px Georgia';
+    ctx.fillText(`+${pts} point${pts !== 1 ? 's' : ''}  •  Total: ${totalScore}`, ox, oy + 26);
+  }
+
+  ctx.fillStyle = '#aaaaaa';
+  ctx.font = '13px Georgia';
+  const nextMsg = (hit || arrowsLeft <= 0) ? 'Click to continue' : `${arrowsLeft} arrow${arrowsLeft !== 1 ? 's' : ''} left — click to continue`;
+  ctx.fillText(nextMsg, ox, oy + 48);
+
+  ctx.textAlign = 'left';
+}
+
+function drawBanner() {
+  if (state !== 'banner') return;
+  const alpha = Math.min(bannerTimer * 2, 1) * Math.min((bannerTimer) / 0.3, 1);
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, alpha);
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  ctx.beginPath();
+  ctx.roundRect(W / 2 - 220, H / 2 - 48, 440, 96, 14);
+  ctx.fill();
+  ctx.fillStyle = '#ffdd66';
+  ctx.font = 'bold 26px Georgia';
+  ctx.textAlign = 'center';
+  ctx.fillText(bannerText, W / 2, H / 2 + 2);
+  ctx.fillStyle = '#aaaaaa';
+  ctx.font = '14px Georgia';
+  ctx.fillText('Hold mouse to draw · Release to shoot', W / 2, H / 2 + 28);
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
+
+function drawGameOver() {
+  if (state !== 'gameover') return;
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffdd44';
+  ctx.font = 'bold 42px Georgia';
+  ctx.fillText('YOU WIN!', W / 2, H / 2 - 40);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '22px Georgia';
+  ctx.fillText(`Final Score: ${totalScore}`, W / 2, H / 2 + 5);
+
+  ctx.fillStyle = '#aaaaaa';
+  ctx.font = '16px Georgia';
+  ctx.fillText('Click to play again', W / 2, H / 2 + 42);
+  ctx.textAlign = 'left';
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  drawBackground();
+  drawWindParticles();
+  drawTarget();
+  drawStuckArrows();
+  drawArcher();
+  drawFlyingArrow();
+  drawHUD();
+  drawWindIndicator();
+  drawPowerMeter();
+  drawResultOverlay();
+  drawBanner();
+  drawGameOver();
+}
+
+// ── LOOP ─────────────────────────────────────────────────────────────────────
+function loop(ts) {
+  update(ts);
+  render();
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
