@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Professor Relationship Playbook</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0C0C0E; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    const professors = [
+      {
+        id: "jacob",
+        name: "Prof. Jodee Jacob",
+        course: "MGT 167 — Social Entrepreneurship",
+        tag: "Talent Spotter",
+        color: "#C8963E",
+        bg: "#1A1208",
+        accent: "#F5DFA0",
+        archetype: "The Mission-Driven Executive",
+        summary: "Former Girl Scouts CEO. Thinks in narrative, people, and legacy. She already likes you — she made that public. Your job is to not let her look wrong for betting on you.",
+        psychProfile: [
+          "Mission & impact over metrics — she led a values organization, not a P&L",
+          "Talent-spotter by decades of habit. Singling you out was a conscious signal",
+          "Publicly invested in your performance (stated high expectations in front of class)",
+          "Respects self-awareness and intellectual humility more than polish alone",
+        ],
+        dos: [
+          "Reference real social entrepreneurs in class participation — not your own work",
+          "Ask specifically about her Girl Scouts tenure, not generic 'nonprofit leadership'",
+          "One substantive post-class conversation every 2–3 weeks. Quality over frequency",
+          "Frame Netcast as a case study still in progress — not proof of arrival",
+          "Let her feel she discovered you. She needs to champion you, not be collected by you",
+        ],
+        donts: [
+          "Don't use class participation to showcase Netcast — save that for private conversations",
+          "Don't be the student who performs visible enthusiasm without substance",
+          "Don't ask about grades or logistics — she responded to growth questions, not tactical ones",
+        ],
+        frameworks: [
+          { label: "Cialdini — Liking + Social Proof", note: "She already likes you. Sustain it through genuine engagement with the material's real-world application." },
+          { label: "Elephant in the Brain", note: "She made a public bet on you. She's now tied to your performance. Don't make her look wrong." },
+          { label: "48 Laws — Law 1", note: "Never Outshine the Master. Present yourself as still growing, not already arrived." },
+        ],
+        recPotential: 5,
+        recNote: "High — but only if she feels she discovered you, not that you're collecting her as a credential.",
+        keyMove: "Ask about a specific Girl Scouts initiative she led. Show you did research. One question lands better than a dozen generic ones.",
+      },
+      {
+        id: "rai",
+        name: "Prof. Rai",
+        course: "MGT 164 — Negotiations",
+        tag: "Status Gatekeeper",
+        color: "#4A7FA5",
+        bg: "#08111A",
+        accent: "#A8D4F5",
+        archetype: "The Ego-Protected Expert",
+        summary: "Dresses meticulously, runs a loosely structured class. Non-engagement is dominance behavior. He respects demonstrated competence, not social warmth. Brevity is power with him.",
+        psychProfile: [
+          "High status self-image, expressed through disengagement — not looking up is a power signal",
+          "Ambiguity in class structure keeps him in control of what 'good' looks like",
+          "Condescension is his default when he feels someone should 'already know' something",
+          "Reluctant handshake + quick pivot = low warmth, high independence. He doesn't need you to like him",
+        ],
+        dos: [
+          "Speak once or twice per class with sharp, principled observations — not frequently with medium-quality ones",
+          "Frame post-class questions intellectually: 'I noticed X in today's exercise — is that consistent with the research?'",
+          "In negotiation exercises, demonstrate clean reasoning and principled outcomes over flashy wins",
+          "Let your performance in the room do the work — that's his only arena of respect",
+        ],
+        donts: [
+          "Don't try to impress him socially before or after class — that already failed once",
+          "Don't be the student who over-participates to signal engagement",
+          "Don't seek warmth or personal connection — he'll read it as neediness",
+          "Don't chase a rec letter from him — a lukewarm letter from this profile hurts more than it helps",
+        ],
+        frameworks: [
+          { label: "48 Laws — Law 1 + Law 4", note: "Never Outshine the Master. Always Say Less Than Necessary. The student who speaks less but sharper gets noticed." },
+          { label: "Navarro — What Everybody Is Saying", note: "Watch for when his body turns toward a student. That tells you what breaks his disengagement default." },
+          { label: "Never Split the Difference (Voss)", note: "In exercises, articulate your reasoning clearly. He respects the 'why' behind a negotiation more than the outcome." },
+        ],
+        recPotential: 2,
+        recNote: "Low priority. Use this class to develop real negotiation skill — directly relevant to Netcast and MBA interviews.",
+        keyMove: "Nail one negotiation exercise publicly. Let the result speak. That's the only currency he trades in.",
+      },
+      {
+        id: "aristotle",
+        name: "Philosophy Professor",
+        course: "PHIL 101 — Aristotle",
+        tag: "Intellectual Validator",
+        color: "#7A5EA7",
+        bg: "#100D1A",
+        accent: "#D4C4F5",
+        archetype: "The Under-Contextualized Scholar",
+        summary: "Harvard PhD in philosophy now at a UC undergrad campus. Her intellectual identity exceeds her current institutional context. Genuine engagement with ideas — not grade optimization — is the only currency that works.",
+        psychProfile: [
+          "Academic self-image larger than her current platform — this is common among humanities PhDs",
+          "Will detect and be quietly repelled by performance or grade-seeking behavior",
+          "Deeply responsive to students who take the ideas seriously on their own terms",
+          "One-on-one office hours is where her intellectual passion surfaces — not large lectures",
+        ],
+        dos: [
+          "Go to office hours at least twice — with a genuine philosophical question, not a grade question",
+          "Bridge Aristotle's eudaimonia to modern entrepreneurship — it's authentic to you and will stick with her",
+          "Leverage your Thomistic background naturally. You're TI President reading Aristotle formally — that's a real through-line",
+          "Reference specific things she said in prior sessions — she tracks who's actually reading",
+          "Frame your rec letter ask around intellectual seriousness as a founder who thinks philosophically",
+        ],
+        donts: [
+          "Don't name-drop your startup in class — it will read as self-promotion in the wrong setting",
+          "Don't ask about grades or logistics in office hours — those conversations close doors",
+          "Don't rush the rec letter ask — it needs to come after she's seen you engage intellectually",
+        ],
+        frameworks: [
+          { label: "Cialdini — Commitment & Consistency", note: "Show up visibly prepared every session. Reference prior lectures. She tracks consistency, not peaks." },
+          { label: "Elephant in the Brain", note: "Philosophers care deeply about being taken seriously as thinkers. Engage her arguments, not just her lecture notes." },
+          { label: "Dimitrius — Reading People", note: "She opens up in 1-on-1 settings far more than lectures. Office hours is where the real relationship is built." },
+        ],
+        recPotential: 5,
+        recNote: "Highest upside. Harvard credential + philosophy = differentiation almost no 2+2 applicant can replicate.",
+        keyMove: "First office hours visit: ask how Aristotle's conception of practical wisdom (phronesis) maps onto modern leadership decisions. She will remember that question.",
+      },
+    ];
+
+    const StarRating = ({ value, color }) => (
+      <div style={{ display: "flex", gap: 4 }}>
+        {[1,2,3,4,5].map(i => (
+          <div key={i} style={{
+            width: 10, height: 10, borderRadius: "50%",
+            background: i <= value ? color : "rgba(255,255,255,0.15)",
+            transition: "background 0.3s"
+          }} />
+        ))}
+      </div>
+    );
+
+    function Playbook() {
+      const [active, setActive] = useState("jacob");
+      const [section, setSection] = useState("overview");
+      const prof = professors.find(p => p.id === active);
+
+      const sections = ["overview", "do's & don'ts", "frameworks", "key move"];
+
+      return (
+        <div style={{
+          fontFamily: "'Georgia', 'Times New Roman', serif",
+          background: "#0C0C0E",
+          minHeight: "100vh",
+          color: "#E8E4DC",
+          display: "flex",
+          flexDirection: "column",
+        }}>
+          {/* Header */}
+          <div style={{
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            padding: "24px 32px 20px",
+            background: "rgba(255,255,255,0.02)",
+          }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.2em", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", marginBottom: 6, fontFamily: "monospace" }}>
+              Spring Quarter — Sophomore Year
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 400, letterSpacing: "-0.02em", color: "#F0EDE8" }}>
+              Professor Relationship Playbook
+            </div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginTop: 4, fontStyle: "italic" }}>
+              MBA Application Integrity · UCSD Spring 2026
+            </div>
+          </div>
+
+          {/* Professor Tabs */}
+          <div style={{
+            display: "flex",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            overflowX: "auto",
+          }}>
+            {professors.map(p => (
+              <button key={p.id} onClick={() => { setActive(p.id); setSection("overview"); }}
+                style={{
+                  flex: 1, minWidth: 140, padding: "16px 20px", border: "none", cursor: "pointer",
+                  background: active === p.id ? p.bg : "transparent",
+                  borderBottom: active === p.id ? `2px solid ${p.color}` : "2px solid transparent",
+                  transition: "all 0.25s",
+                  textAlign: "left",
+                }}>
+                <div style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: active === p.id ? p.color : "rgba(255,255,255,0.3)", marginBottom: 4, fontFamily: "monospace" }}>
+                  {p.tag}
+                </div>
+                <div style={{ fontSize: 13, color: active === p.id ? p.accent : "rgba(255,255,255,0.5)", fontWeight: 500 }}>
+                  {p.name}
+                </div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>
+                  {p.course.split("—")[0].trim()}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", background: prof.bg, transition: "background 0.4s" }}>
+
+            {/* Prof Header */}
+            <div style={{ padding: "28px 32px 20px", borderBottom: `1px solid ${prof.color}22` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 26, fontWeight: 400, color: prof.accent, letterSpacing: "-0.02em" }}>{prof.name}</div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 4, fontStyle: "italic" }}>{prof.course}</div>
+                  <div style={{ fontSize: 12, color: prof.color, marginTop: 8, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    "{prof.archetype}"
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 6, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "monospace" }}>Rec Letter Potential</div>
+                  <StarRating value={prof.recPotential} color={prof.color} />
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 6, maxWidth: 200, textAlign: "right" }}>{prof.recNote}</div>
+                </div>
+              </div>
+
+              <div style={{
+                marginTop: 16, padding: "14px 18px",
+                background: `${prof.color}18`,
+                borderLeft: `3px solid ${prof.color}`,
+                borderRadius: "0 6px 6px 0",
+                fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.6, fontStyle: "italic"
+              }}>
+                {prof.summary}
+              </div>
+            </div>
+
+            {/* Section Nav */}
+            <div style={{ display: "flex", gap: 0, padding: "0 32px", borderBottom: `1px solid ${prof.color}22` }}>
+              {sections.map(s => (
+                <button key={s} onClick={() => setSection(s)}
+                  style={{
+                    padding: "12px 16px", border: "none", background: "transparent", cursor: "pointer",
+                    fontSize: 12, textTransform: "uppercase", letterSpacing: "0.12em", fontFamily: "monospace",
+                    color: section === s ? prof.color : "rgba(255,255,255,0.3)",
+                    borderBottom: section === s ? `2px solid ${prof.color}` : "2px solid transparent",
+                    transition: "all 0.2s",
+                  }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            {/* Section Content */}
+            <div style={{ padding: "28px 32px", flex: 1, overflowY: "auto" }}>
+
+              {section === "overview" && (
+                <div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 16, fontFamily: "monospace" }}>Psychological Profile</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {prof.psychProfile.map((item, i) => (
+                      <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                        <div style={{ width: 20, height: 20, borderRadius: "50%", background: `${prof.color}30`, border: `1px solid ${prof.color}60`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 10, color: prof.color, fontFamily: "monospace", marginTop: 1 }}>
+                          {i + 1}
+                        </div>
+                        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.6 }}>{item}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {section === "do's & don'ts" && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                  <div>
+                    <div style={{ fontSize: 13, color: prof.color, textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 14, fontFamily: "monospace" }}>✓ Do</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {prof.dos.map((item, i) => (
+                        <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: prof.color, flexShrink: 0, marginTop: 7 }} />
+                          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.72)", lineHeight: 1.6 }}>{item}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, color: "#C05050", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 14, fontFamily: "monospace" }}>✗ Don't</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {prof.donts.map((item, i) => (
+                        <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#C05050", flexShrink: 0, marginTop: 7 }} />
+                          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.72)", lineHeight: 1.6 }}>{item}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {section === "frameworks" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 4, fontFamily: "monospace" }}>Applied Frameworks</div>
+                  {prof.frameworks.map((f, i) => (
+                    <div key={i} style={{
+                      padding: "16px 20px",
+                      background: `${prof.color}12`,
+                      border: `1px solid ${prof.color}30`,
+                      borderRadius: 8,
+                    }}>
+                      <div style={{ fontSize: 13, color: prof.accent, fontWeight: 600, marginBottom: 8, fontFamily: "monospace", letterSpacing: "0.05em" }}>
+                        {f.label}
+                      </div>
+                      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.68)", lineHeight: 1.65 }}>{f.note}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {section === "key move" && (
+                <div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 16, fontFamily: "monospace" }}>Your Single Highest-Leverage Move</div>
+                  <div style={{
+                    padding: "28px 28px",
+                    background: `${prof.color}18`,
+                    border: `1px solid ${prof.color}50`,
+                    borderRadius: 10,
+                    fontSize: 17,
+                    color: prof.accent,
+                    lineHeight: 1.75,
+                    fontStyle: "italic",
+                    letterSpacing: "-0.01em",
+                  }}>
+                    "{prof.keyMove}"
+                  </div>
+                  <div style={{ marginTop: 24, padding: "16px 20px", background: "rgba(255,255,255,0.04)", borderRadius: 8, fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+                    <span style={{ color: prof.color, fontFamily: "monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em" }}>Rec Letter Timeline: </span>
+                    {prof.recNote}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{
+            padding: "12px 32px", borderTop: "1px solid rgba(255,255,255,0.06)",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            background: "rgba(0,0,0,0.3)",
+          }}>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", fontFamily: "monospace", letterSpacing: "0.1em" }}>
+              NETCAST MARKETING · HBS 2+2 TRACK · SPRING 2026
+            </div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", fontFamily: "monospace" }}>
+              {professors.length} PROFESSORS · {professors.reduce((a,p) => a + p.dos.length + p.donts.length, 0)} TACTICAL NOTES
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<Playbook />);
+  </script>
+</body>
+</html>
