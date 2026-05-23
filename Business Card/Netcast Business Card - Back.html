@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Netcast Business Card — Back</title>
+<meta name="viewport" content="width=1280" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* Screen scale: 1 inch = 240 px — matches front exactly */
+    --ppi: 240;
+    --bleed-w: calc(3.75 * var(--ppi) * 1px);   /* 900 */
+    --bleed-h: calc(2.25 * var(--ppi) * 1px);   /* 540 */
+    --trim-w:  calc(3.5  * var(--ppi) * 1px);   /* 840 */
+    --trim-h:  calc(2.0  * var(--ppi) * 1px);   /* 480 */
+    --trim-inset: calc(0.125 * var(--ppi) * 1px); /* 30 */
+    --safe-inset: calc(0.25  * var(--ppi) * 1px); /* 60 */
+
+    --ink-black: #000000;
+    --ink-gold:  #CCAC34;   /* sampled from logo — IDENTICAL to front */
+    --ink-white: #FFFFFF;
+
+    --page-bg:   #ececea;
+    --page-ink:  #1a1a1a;
+    --page-mute: #7a7a78;
+    --rule:      #d3d3cf;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Cormorant Garamond", serif;
+    background: var(--page-bg);
+    color: var(--page-ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  /* ─── Document chrome — matches front ─── */
+  .page { max-width: 1280px; margin: 0 auto; padding: 64px 80px 96px;
+          font-family: "Montserrat", system-ui, sans-serif; }
+  .meta {
+    display: grid; grid-template-columns: 1fr auto;
+    align-items: end; gap: 24px;
+    padding-bottom: 24px; border-bottom: 1px solid var(--rule);
+    margin-bottom: 64px;
+  }
+  .meta h1 { font-size: 13px; font-weight: 600; letter-spacing: 0.18em;
+             text-transform: uppercase; margin: 0 0 8px; color: var(--page-mute); }
+  .meta h2 { font-size: 28px; font-weight: 500; letter-spacing: -0.01em; margin: 0; }
+  .meta .specs { display: flex; gap: 32px; font-size: 11px;
+                 letter-spacing: 0.16em; text-transform: uppercase; color: var(--page-mute); }
+  .meta .specs b { color: var(--page-ink); font-weight: 600; }
+
+  .section-head {
+    display: grid; grid-template-columns: auto 1fr;
+    align-items: baseline; gap: 20px; margin-bottom: 40px;
+  }
+  .section-head .num { font-size: 11px; letter-spacing: 0.24em;
+                       color: var(--page-mute); font-weight: 500; }
+  .section-head h3 { font-size: 18px; font-weight: 600; letter-spacing: -0.005em; margin: 0; }
+  .section-head .sub { grid-column: 2; font-size: 13px; color: var(--page-mute);
+                       margin-top: 4px; max-width: 60ch; line-height: 1.5; }
+
+  /* ============================================================
+     THE CARD — single centered stack: logo · line · qr
+     ============================================================ */
+  .card {
+    width: var(--bleed-w);
+    height: var(--bleed-h);
+    background: var(--ink-black);
+    position: relative;
+    overflow: hidden;
+    font-family: var(--card-font, "Cormorant Garamond", serif);
+    /* match front's subtle field warmth */
+    background-image:
+      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.012), transparent 60%),
+      radial-gradient(ellipse at 70% 90%, rgba(255,255,255,0.008), transparent 55%);
+  }
+
+  /* The whole composition is one centered stack inside the safe area. */
+  .card-inner {
+    position: absolute;
+    inset: var(--safe-inset);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: var(--ink-white);
+  }
+
+  .stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* The stack flows naturally; nudge the visual center up slightly because
+       the wordmark is type-heavy at top and the QR is a solid block at bottom —
+       optical centering reads more balanced than mathematical centering. */
+    transform: translateY(var(--stack-nudge, 0px));
+  }
+
+  /* Element 1 — logo */
+  .logo {
+    display: block;
+    width: var(--logo-w, 25%);   /* same width as front default */
+    height: auto;
+    object-fit: contain;
+  }
+
+  /* Element 2 — positioning line.
+     Regular-weight Cormorant; confident readable statement. */
+  .tagline {
+    font-family: var(--card-font, "Cormorant Garamond", serif);
+    font-style: normal;
+    font-weight: 400;
+    font-size: var(--tagline-size, 13px);
+    line-height: 1.15;
+    letter-spacing: 0.005em;
+    color: var(--ink-white);
+    margin: 0;
+    text-align: center;
+    /* tight but breathing gap from logo */
+    margin-top: var(--logo-tagline-gap, 14px);
+    white-space: nowrap;
+  }
+
+  /* Element 3 — QR */
+  .qr-wrap {
+    margin-top: var(--tagline-qr-gap, 16px);
+    width: var(--qr-size, 132px);   /* 0.55" × 240ppi = 132px */
+    height: var(--qr-size, 132px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .qr-wrap img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+  /* ============================================================
+     HERO PRESENTATION
+     ============================================================ */
+  .hero {
+    background: linear-gradient(180deg, #e3e2dd 0%, #d8d6d0 100%);
+    padding: 96px 0;
+    display: flex; justify-content: center; align-items: center;
+    border: 1px solid var(--rule);
+  }
+  .hero .card {
+    width: var(--trim-w);
+    height: var(--trim-h);
+    border-radius: 4px;
+    box-shadow:
+      0 1px 1px rgba(0,0,0,0.18),
+      0 2px 4px rgba(0,0,0,0.10),
+      0 14px 28px rgba(0,0,0,0.22),
+      0 32px 60px rgba(0,0,0,0.26);
+  }
+  .hero .card-inner { inset: calc(var(--safe-inset) - var(--trim-inset)); }
+
+  /* ============================================================
+     FRONT / BACK PAIR
+     ============================================================ */
+  .pair-stage {
+    background: linear-gradient(180deg, #e3e2dd 0%, #d8d6d0 100%);
+    padding: 80px 0;
+    display: flex; justify-content: center; align-items: center;
+    gap: 64px;
+    border: 1px solid var(--rule);
+    flex-wrap: wrap;
+  }
+  .pair-card {
+    width: var(--trim-w); height: var(--trim-h);
+    border-radius: 4px; overflow: hidden; position: relative;
+    background: #000;
+    box-shadow:
+      0 1px 1px rgba(0,0,0,0.18),
+      0 2px 4px rgba(0,0,0,0.10),
+      0 14px 28px rgba(0,0,0,0.22),
+      0 32px 60px rgba(0,0,0,0.26);
+  }
+  .pair-label {
+    position: absolute;
+    bottom: -28px; left: 0; right: 0;
+    text-align: center;
+    font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--page-mute); font-weight: 500;
+  }
+  .pair-front-inner, .pair-back-inner {
+    position: absolute; inset: calc(var(--safe-inset) - var(--trim-inset));
+    color: var(--ink-white);
+  }
+
+  /* Render the back at trim size inside the pair view so it isn't clipped */
+  .pair-card .card { width: var(--trim-w); height: var(--trim-h); }
+  .pair-card .card .card-inner { inset: calc(var(--safe-inset) - var(--trim-inset)); }
+
+  /* miniature front rendition just for the comparison */
+  .pair-front-inner {
+    display: grid; grid-template-rows: auto 1fr auto;
+  }
+  .pf-logo { display: flex; justify-content: center; align-items: center; }
+  .pf-logo img { width: 25%; height: auto; }
+  .pf-id { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; }
+  .pf-name { font-family: "Cormorant Garamond", serif; font-weight: 700;
+             font-size: 56px; line-height: 1; color: var(--ink-gold); margin: 0; }
+  .pf-title { font-family: "Cormorant Garamond", serif; font-weight: 500;
+              font-size: 15px; line-height: 1; letter-spacing: 0.42em;
+              text-transform: uppercase; color: var(--ink-white); margin: 0;
+              padding-left: 0.42em; }
+  .pf-contact { display: grid; grid-template-columns: 1fr 1fr 1fr;
+                align-items: end; padding-bottom: 4px; }
+  .pf-contact span { font-family: "Cormorant Garamond", serif; font-style: italic;
+                     font-size: 18px; line-height: 1; color: var(--ink-white);
+                     white-space: nowrap; }
+  .pf-contact span:nth-child(1) { text-align: left; }
+  .pf-contact span:nth-child(2) { text-align: center; }
+  .pf-contact span:nth-child(3) { text-align: right; }
+
+  /* ============================================================
+     PRINT SPEC VIEW
+     ============================================================ */
+  .print { margin-top: 96px; }
+  .print-stage {
+    background: #fafaf8; border: 1px solid var(--rule);
+    padding: 80px; display: flex; justify-content: center;
+  }
+  .print-frame { position: relative; width: var(--bleed-w); height: var(--bleed-h); }
+
+  .crop { position: absolute; pointer-events: none; }
+  .crop::before, .crop::after { content: ""; position: absolute; background: #1a1a1a; }
+  .crop.tl { top: var(--trim-inset); left: var(--trim-inset); }
+  .crop.tr { top: var(--trim-inset); right: var(--trim-inset); }
+  .crop.bl { bottom: var(--trim-inset); left: var(--trim-inset); }
+  .crop.br { bottom: var(--trim-inset); right: var(--trim-inset); }
+  .crop.tl::before { width: 14px; height: 1px; left: -22px; top: 0; }
+  .crop.tl::after  { width: 1px; height: 14px; left: 0; top: -22px; }
+  .crop.tr::before { width: 14px; height: 1px; right: -22px; top: 0; }
+  .crop.tr::after  { width: 1px; height: 14px; right: 0; top: -22px; }
+  .crop.bl::before { width: 14px; height: 1px; left: -22px; bottom: 0; }
+  .crop.bl::after  { width: 1px; height: 14px; left: 0; bottom: -22px; }
+  .crop.br::before { width: 14px; height: 1px; right: -22px; bottom: 0; }
+  .crop.br::after  { width: 1px; height: 14px; right: 0; bottom: -22px; }
+
+  .guide { position: absolute; pointer-events: none; }
+  .guide.trim { inset: var(--trim-inset); outline: 1px dashed rgba(255,255,255,0.55); }
+  .guide.safe { inset: var(--safe-inset); outline: 1px dashed rgba(204,172,52,0.6); }
+
+  .dim {
+    position: absolute; font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--page-mute);
+    font-weight: 500; white-space: nowrap;
+  }
+  .dim.top    { top: -34px; left: 50%; transform: translateX(-50%); }
+  .dim.bottom { bottom: -34px; left: 50%; transform: translateX(-50%); }
+  .dim.left   { left: -56px; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: center; }
+  .dim.right  { right: -56px; top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: center; }
+
+  .legend {
+    margin-top: 64px; display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 32px; max-width: var(--bleed-w);
+    margin-left: auto; margin-right: auto;
+  }
+  .legend-item { display: grid; grid-template-columns: 28px 1fr; gap: 14px; align-items: start; }
+  .swatch { width: 28px; height: 0; margin-top: 8px; border-top: 1px dashed; }
+  .legend-item dt { font-size: 11px; font-weight: 600; letter-spacing: 0.16em;
+                    text-transform: uppercase; margin: 0 0 4px; }
+  .legend-item dd { margin: 0; font-size: 12px; color: var(--page-mute); line-height: 1.5; }
+
+  /* ============================================================
+     SPEC FOOTER
+     ============================================================ */
+  .specs-grid {
+    margin-top: 96px; display: grid; grid-template-columns: 1fr 1fr;
+    gap: 64px; padding-top: 40px; border-top: 1px solid var(--rule);
+  }
+  .spec-block h4 {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--page-mute); margin: 0 0 20px;
+  }
+  .color-row {
+    display: grid; grid-template-columns: 56px 1fr auto;
+    gap: 16px; align-items: center; padding: 12px 0;
+    border-bottom: 1px solid var(--rule); font-size: 13px;
+  }
+  .color-row:last-child { border-bottom: none; }
+  .chip { width: 56px; height: 56px; border-radius: 2px; }
+  .chip.black { background: #000; }
+  .chip.gold  { background: #CCAC34; }
+  .chip.white { background: #fff; border: 1px solid var(--rule); }
+  .color-row .name-col { font-weight: 600; }
+  .color-row .mode { color: var(--page-mute); font-size: 11px; letter-spacing: 0.08em; }
+  .color-row .hex { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; color: var(--page-ink); }
+
+  .type-row {
+    display: grid; grid-template-columns: 140px 1fr auto;
+    gap: 16px; align-items: baseline; padding: 14px 0;
+    border-bottom: 1px solid var(--rule); font-size: 12px; color: var(--page-mute);
+  }
+  .type-row:last-child { border-bottom: none; }
+  .type-row .role { letter-spacing: 0.12em; text-transform: uppercase; font-size: 10px; }
+  .type-row .sample { color: var(--page-ink); font-size: 14px;
+                      font-family: var(--card-font, "Cormorant Garamond", serif); }
+  .type-row .meta-col { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; }
+  .sample-tagline { font-size: 16px; }
+
+  /* Slot for user to drop in real QR PNG when ready */
+  .qr-slot-row {
+    margin-top: 40px;
+    display: grid; grid-template-columns: 132px 1fr; gap: 24px;
+    align-items: center;
+    padding: 20px; background: #fafaf8; border: 1px dashed var(--rule);
+    border-radius: 4px;
+  }
+  .qr-slot-row image-slot { background: #f0eee9; }
+  .qr-slot-row h5 { margin: 0 0 6px; font-size: 12px; font-weight: 600;
+                    letter-spacing: 0.14em; text-transform: uppercase; }
+  .qr-slot-row p { margin: 0; font-size: 12px; color: var(--page-mute); line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "fontFamily": "Cormorant Garamond",
+  "logoWidth": 20,
+  "taglineSize": 28,
+  "logoTaglineGap": 26,
+  "taglineQrGap": 26,
+  "qrSize": 110,
+  "stackNudge": 0
+}/*EDITMODE-END*/;
+
+const FONT_OPTIONS = [
+  { value: "Cormorant Garamond", label: "Cormorant" },
+  { value: "Playfair Display",   label: "Playfair" },
+  { value: "Montserrat",         label: "Montserrat" }
+];
+
+/* ---------- The card ---------- */
+function Card({ t, withBleed = false }) {
+  const cardVars = {
+    "--card-font": `"${t.fontFamily}", serif`,
+    "--logo-w": `${t.logoWidth}%`,
+    "--tagline-size": `${t.taglineSize}px`,
+    "--logo-tagline-gap": `${t.logoTaglineGap}px`,
+    "--tagline-qr-gap": `${t.taglineQrGap}px`,
+    "--qr-size": `${t.qrSize}px`,
+    "--stack-nudge": `${t.stackNudge}px`
+  };
+
+  return (
+    <article className="card" style={cardVars}>
+      <div className="card-inner">
+        <div className="stack">
+          <img className="logo" src="assets/netcast-logo-tight.png" alt="Netcast Marketing" />
+          <p className="tagline">More AUM. Less prospecting.</p>
+          <div className="qr-wrap">
+            <img src="assets/qr-code.png" alt="QR code" />
+          </div>
+        </div>
+      </div>
+      {withBleed && (
+        <React.Fragment>
+          <div className="guide trim"></div>
+          <div className="guide safe"></div>
+        </React.Fragment>
+      )}
+    </article>
+  );
+}
+
+/* ---------- Miniature front for the pair view ---------- */
+function FrontMini() {
+  return (
+    <div className="pair-card">
+      <div className="pair-front-inner">
+        <div className="pf-logo">
+          <img src="assets/netcast-logo-tight.png" alt="" />
+        </div>
+        <div className="pf-id">
+          <h2 className="pf-name">Andre Lokuszta</h2>
+          <p className="pf-title">Founder &amp; CEO</p>
+        </div>
+        <div className="pf-contact">
+          <span>andre@netcastmarketing.com</span>
+          <span>linkedin.com/in/andre-lokuszta</span>
+          <span>netcastmarketing.com</span>
+        </div>
+      </div>
+      <div className="pair-label">Front</div>
+    </div>
+  );
+}
+
+function BackInPair({ t }) {
+  return (
+    <div className="pair-card" style={{ position: "relative" }}>
+      <Card t={t} />
+      <div className="pair-label">Back</div>
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  return (
+    <React.Fragment>
+      <div className="page">
+        <header className="meta">
+          <div>
+            <h1>Netcast Marketing · Business Card</h1>
+            <h2>Back — Brand &amp; Call to Action</h2>
+          </div>
+          <div className="specs">
+            <div><b>3.75 × 2.25"</b> bleed</div>
+            <div><b>3.5 × 2.0"</b> trim</div>
+            <div><b>CMYK / 300 dpi</b></div>
+          </div>
+        </header>
+
+        <section>
+          <div className="section-head">
+            <span className="num">01</span>
+            <div>
+              <h3>Presentation</h3>
+              <p className="sub">Three elements — logo, positioning line, QR — grouped as a single unit, optically centered on the field. Equal black space frames the composition top and bottom.</p>
+            </div>
+          </div>
+          <div className="hero"><Card t={t} /></div>
+        </section>
+
+        <section style={{ marginTop: "96px" }}>
+          <div className="section-head">
+            <span className="num">02</span>
+            <div>
+              <h3>Front · Back pair</h3>
+              <p className="sub">Both faces at trim, side by side. The front leads with the person. The back is the deliberate inverse — brand and call to action, restraint matched in every respect.</p>
+            </div>
+          </div>
+          <div className="pair-stage">
+            <FrontMini />
+            <BackInPair t={t} />
+          </div>
+        </section>
+
+        <section className="print">
+          <div className="section-head">
+            <span className="num">03</span>
+            <div>
+              <h3>Print specification</h3>
+              <p className="sub">Full bleed canvas with trim (white dashed) and 0.125" safe area (gold dashed). Corner ticks mark the cut. Identical geometry to the front.</p>
+            </div>
+          </div>
+
+          <div className="print-stage">
+            <div className="print-frame">
+              <div className="dim top">3.75" — 1125 px @ 300 dpi (bleed)</div>
+              <div className="dim bottom">3.5" trim</div>
+              <div className="dim left">2.25" bleed</div>
+              <div className="dim right">2.0" trim</div>
+
+              <Card t={t} withBleed />
+
+              <span className="crop tl"></span>
+              <span className="crop tr"></span>
+              <span className="crop bl"></span>
+              <span className="crop br"></span>
+            </div>
+          </div>
+
+          <dl className="legend">
+            <div className="legend-item">
+              <span className="swatch" style={{ borderColor: "#1a1a1a" }}></span>
+              <div>
+                <dt>Bleed · 3.75 × 2.25"</dt>
+                <dd>Solid matte black to the canvas edge — press trims into this margin.</dd>
+              </div>
+            </div>
+            <div className="legend-item">
+              <span className="swatch" style={{ borderColor: "rgba(120,120,120,0.9)" }}></span>
+              <div>
+                <dt>Trim · 3.5 × 2.0"</dt>
+                <dd>Finished cut line — the visible card edge.</dd>
+              </div>
+            </div>
+            <div className="legend-item">
+              <span className="swatch" style={{ borderColor: "#CCAC34" }}></span>
+              <div>
+                <dt>Safe · 3.25 × 1.75"</dt>
+                <dd>0.125" inside the trim. All artwork stays inside this gold guide.</dd>
+              </div>
+            </div>
+          </dl>
+
+        </section>
+
+        <section className="specs-grid">
+          <div className="spec-block">
+            <h4>Colorway — identical to front</h4>
+            <div className="color-row">
+              <span className="chip black"></span>
+              <div>
+                <div className="name-col">Matte black</div>
+                <div className="mode">FIELD · uncoated</div>
+              </div>
+              <div className="hex">#000000</div>
+            </div>
+            <div className="color-row">
+              <span className="chip gold"></span>
+              <div>
+                <div className="name-col">Brand gold</div>
+                <div className="mode">LOGO ONLY</div>
+              </div>
+              <div className="hex">#CCAC34</div>
+            </div>
+            <div className="color-row">
+              <span className="chip white"></span>
+              <div>
+                <div className="name-col">Paper white</div>
+                <div className="mode">TAGLINE</div>
+              </div>
+              <div className="hex">#FFFFFF</div>
+            </div>
+          </div>
+
+          <div className="spec-block">
+            <h4>Typography — {t.fontFamily}</h4>
+            <div className="type-row">
+              <span className="role">Logo</span>
+              <span className="sample" style={{ color: "#CCAC34", fontWeight: 700 }}>Netcast Marketing</span>
+              <span className="meta-col">image / gold</span>
+            </div>
+            <div className="type-row">
+              <span className="role">Tagline</span>
+              <span className="sample sample-tagline">More AUM. Less prospecting.</span>
+              <span className="meta-col">400 / {t.taglineSize}px / white</span>
+            </div>
+            <div className="type-row">
+              <span className="role">QR</span>
+              <span className="sample" style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>assets/qr-code.png</span>
+              <span className="meta-col">0.55" · as-uploaded</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Composition" />
+        <TweakSlider
+          label="Logo width"
+          value={t.logoWidth}
+          min={20} max={40} step={1} unit="%"
+          onChange={(v) => setTweak("logoWidth", v)}
+        />
+        <TweakSlider
+          label="Logo → tagline gap"
+          value={t.logoTaglineGap}
+          min={4} max={32} step={1} unit="px"
+          onChange={(v) => setTweak("logoTaglineGap", v)}
+        />
+        <TweakSlider
+          label="Tagline → QR gap"
+          value={t.taglineQrGap}
+          min={4} max={36} step={1} unit="px"
+          onChange={(v) => setTweak("taglineQrGap", v)}
+        />
+        <TweakSlider
+          label="Optical nudge"
+          value={t.stackNudge}
+          min={-20} max={20} step={1} unit="px"
+          onChange={(v) => setTweak("stackNudge", v)}
+        />
+
+        <TweakSection label="Typography" />
+        <TweakRadio
+          label="Family"
+          value={t.fontFamily}
+          options={FONT_OPTIONS}
+          onChange={(v) => setTweak("fontFamily", v)}
+        />
+        <TweakSlider
+          label="Tagline size"
+          value={t.taglineSize}
+          min={10} max={18} step={1} unit="px"
+          onChange={(v) => setTweak("taglineSize", v)}
+        />
+
+        <TweakSection label="QR" />
+        <TweakSlider
+          label="Size"
+          value={t.qrSize}
+          min={108} max={168} step={2} unit="px"
+          onChange={(v) => setTweak("qrSize", v)}
+        />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
