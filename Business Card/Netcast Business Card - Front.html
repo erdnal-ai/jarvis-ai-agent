@@ -6,12 +6,12 @@
 <meta name="viewport" content="width=1050" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;700&display=swap" rel="stylesheet" />
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #b0b0ae;
+    background: #b2b0ab;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -23,15 +23,15 @@
   }
 
   .hint {
-    font-size: 12px;
-    letter-spacing: 0.12em;
+    font-size: 11px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: #555;
-    margin-bottom: 40px;
+    color: #545250;
+    margin-bottom: 44px;
     text-align: center;
   }
 
-  /* ── Card at trim size: 3.5 × 2.0" at 240 ppi = 840 × 480 px ── */
+  /* ── Card: 3.5 × 2.0" trim at 240 ppi = 840 × 480 px ── */
   .card {
     width: 840px;
     height: 480px;
@@ -41,45 +41,48 @@
     border-radius: 5px;
     box-shadow:
       0 1px 2px rgba(0,0,0,0.22),
-      0 4px 8px rgba(0,0,0,0.14),
-      0 20px 44px rgba(0,0,0,0.28),
-      0 40px 80px rgba(0,0,0,0.26);
+      0 4px 10px rgba(0,0,0,0.16),
+      0 20px 44px rgba(0,0,0,0.32),
+      0 44px 90px rgba(0,0,0,0.28);
     font-family: "Cormorant Garamond", Georgia, serif;
+    /* very subtle warmth field */
     background-image:
       radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.012), transparent 60%),
       radial-gradient(ellipse at 70% 90%, rgba(255,255,255,0.008), transparent 55%);
   }
 
-  /* Safe area: 60px in from each edge */
+  /* Safe area inset: 60px = 0.25" from card edge */
   .card-inner {
     position: absolute;
     inset: 60px;
-    display: grid;
-    grid-template-rows: auto 1fr auto;
+    /* flex space-between: logo anchored top, contacts anchored bottom,
+       name/title perfectly centered in whatever remains */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
     color: #fff;
   }
 
-  /* ── Logo ── */
+  /* ── Logo — anchored top ── */
   .zone-logo {
     display: flex;
     justify-content: center;
-    align-items: center;
-    padding-top: 2px;
+    align-items: flex-start;
   }
   .logo {
     display: block;
-    width: 46%;
+    width: 35%;
     height: auto;
     object-fit: contain;
   }
 
-  /* ── Name + Title ── */
+  /* ── Name + Title — floats center ── */
   .zone-identity {
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     text-align: center;
   }
   .name {
@@ -90,29 +93,32 @@
     color: #CCAC34;
   }
   .title {
-    font-weight: 500;
-    font-size: 15px;
+    font-weight: 400;
+    font-size: 17px;
     line-height: 1;
-    letter-spacing: 0.42em;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: #fff;
-    padding-left: 0.42em;
+    color: rgba(255,255,255,0.82);
+    padding-left: 0.22em; /* compensate trailing tracking */
   }
 
-  /* ── Contact — stacked vertically, centered ── */
+  /* ── Contact — anchored bottom, stacked centered ── */
   .zone-contact {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 7px;
-    padding-bottom: 20px;
+    width: 100%;
+    /* thin gold rule above contact block separates it from identity */
+    border-top: 1px solid rgba(204,172,52,0.28);
+    padding-top: 14px;
   }
   .contact-item {
-    font-weight: 500;
-    font-size: 22px;
+    font-weight: 400;
+    font-size: 21px;
     line-height: 1;
     letter-spacing: 0.02em;
-    color: #fff;
+    color: rgba(255,255,255,0.92);
     white-space: nowrap;
   }
 
@@ -123,23 +129,20 @@
     .card {
       box-shadow: none;
       border-radius: 0;
-      /* 3.5 × 2.0" at 96 CSS dpi, scaled to physical inches */
       width: 3.5in;
       height: 2.0in;
     }
-    /* Font sizes rescaled for 3.5in card (factor: 3.5in / 840px ≈ 0.4167) */
     .name         { font-size: 23.3pt; }
-    .title        { font-size: 6.25pt; letter-spacing: 0.42em; }
-    .contact-item { font-size: 9.2pt; }
-    .zone-contact { gap: 3pt; padding-bottom: 8pt; }
-    .zone-identity { gap: 3pt; }
+    .title        { font-size: 7.1pt; letter-spacing: 0.22em; }
+    .contact-item { font-size: 8.75pt; }
+    .zone-contact { gap: 3pt; padding-top: 6pt; }
     .card-inner   { inset: 0.25in; }
-    .logo         { width: 46%; }
+    .logo         { width: 35%; }
   }
 </style>
 </head>
 <body>
-<p class="hint">File &rarr; Print &rarr; Save as PDF &nbsp;&middot;&nbsp; Use "Actual size / 100%" &nbsp;&middot;&nbsp; No margins</p>
+<p class="hint">File &rarr; Print &rarr; Save as PDF &nbsp;&middot;&nbsp; Actual size, no margins</p>
 
 <div class="card">
   <div class="card-inner">
